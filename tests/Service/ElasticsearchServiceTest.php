@@ -2,8 +2,7 @@
 
 namespace SilverStripe\SearchServiceElastic\Tests\Service;
 
-use Elastic\EnterpriseSearch\AppSearch\Schema\SchemaUpdateRequest;
-use Elastic\EnterpriseSearch\Client as ElasticClient;
+use Elastic\Elasticsearch\Client as ElasticsearchClient;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -18,7 +17,7 @@ use SilverStripe\SearchService\Extensions\SearchServiceExtension;
 use SilverStripe\SearchService\Interfaces\IndexingInterface;
 use SilverStripe\SearchService\Service\DocumentBuilder;
 use SilverStripe\SearchService\Service\IndexConfiguration;
-use SilverStripe\SearchServiceElastic\Service\EnterpriseSearchService;
+use SilverStripe\SearchServiceElastic\Service\ElasticsearchService;
 use SilverStripe\SearchServiceElastic\Tests\Fake\DataObjectFake;
 use SilverStripe\SearchServiceElastic\Tests\Fake\DataObjectFakePrivate;
 use SilverStripe\SearchServiceElastic\Tests\Fake\DataObjectFakeVersioned;
@@ -27,10 +26,10 @@ use SilverStripe\SearchServiceElastic\Tests\Fake\IndexConfigurationFake;
 use SilverStripe\SearchServiceElastic\Tests\Fake\TagFake;
 use SilverStripe\Security\Member;
 
-class EnterpriseSearchServiceTest extends SapphireTest
+class ElasticsearchServiceTest extends SapphireTest
 {
 
-    protected static $fixture_file = 'EnterpriseSearchServiceTest.yml'; // phpcs:ignore
+    protected static $fixture_file = 'ElasticsearchServiceTest.yml'; // phpcs:ignore
 
     /**
      * @phpcsSuppress SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingNativeTypeHint
@@ -47,24 +46,29 @@ class EnterpriseSearchServiceTest extends SapphireTest
 
     protected ?MockHandler $mock;
 
-    protected EnterpriseSearchService $searchService;
+    protected ElasticsearchService $searchService;
 
     public function testMaxDocumentSize(): void
     {
-        EnterpriseSearchService::config()->set('max_document_size', 100);
-
-        $this->assertEquals(100, $this->searchService->getMaxDocumentSize());
+        $this->assertEquals(102400, $this->searchService->getMaxDocumentSize());
     }
 
     public function testGetExternalURL(): void
     {
-        Environment::setEnv('ENTERPRISE_SEARCH_ENDPOINT', null);
-
         $this->assertNull($this->searchService->getExternalURL());
+    }
 
-        Environment::setEnv('ENTERPRISE_SEARCH_ENDPOINT', 'https://api.elastic.com');
+    public function testGetExternalURLDescription(): void
+    {
+        $this->assertNull($this->searchService->getExternalURLDescription());
+    }
 
-        $this->assertEquals('https://api.elastic.com', $this->searchService->getExternalURL());
+    public function testGetDocumentationURL(): void
+    {
+        $this->assertEquals(
+            'https://www.elastic.co/elasticsearch/',
+            $this->searchService->getDocumentationURL()
+        );
     }
 
     public function testEnvironmentizeIndex(): void
@@ -72,7 +76,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         // Setting this to null to check that the "no prefix version works
         IndexConfiguration::singleton()->setIndexVariant(null);
 
-        /** @var IndexingInterface|EnterpriseSearchService $indexer */
+        /** @var IndexingInterface|ElasticsearchService $indexer */
         $indexer = Injector::inst()->get(IndexingInterface::class);
 
         // No change to our indexName should be made
@@ -148,7 +152,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         ];
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'schemaRequiresUpdate');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'schemaRequiresUpdate');
         $reflectionMethod->setAccessible(true);
 
         // There are no differences (that we care about), so we would expect this to be false
@@ -173,7 +177,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         ];
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'schemaRequiresUpdate');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'schemaRequiresUpdate');
         $reflectionMethod->setAccessible(true);
 
         // There are no differences (that we care about), so we would expect this to be false
@@ -197,7 +201,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         ];
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'schemaRequiresUpdate');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'schemaRequiresUpdate');
         $reflectionMethod->setAccessible(true);
 
         // There are no differences (that we care about), so we would expect this to be false
@@ -216,7 +220,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         $fields = $this->searchService->getConfiguration()->getFieldsForIndex('content');
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'getSchemaForFields');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'getSchemaForFields');
         $reflectionMethod->setAccessible(true);
 
         // Invoke our method which should simply result in [no exceptions being thrown]
@@ -232,7 +236,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         $this->expectNotToPerformAssertions();
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'validateIndex');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'validateIndex');
         $reflectionMethod->setAccessible(true);
 
         // Invoke our method which should simply result in [no exceptions being thrown]
@@ -268,7 +272,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         );
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'validateIndex');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'validateIndex');
         $reflectionMethod->setAccessible(true);
 
         // Invoke our method which should throw our expected Exception message
@@ -314,7 +318,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         );
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'validateIndex');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'validateIndex');
         $reflectionMethod->setAccessible(true);
 
         // Invoke our method which should throw our expected Exception message
@@ -343,7 +347,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         $this->mock->append(new Response(200, $headers, $body));
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'fetchEngines');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'fetchEngines');
         $reflectionMethod->setAccessible(true);
 
         // We expect just the one engine
@@ -374,7 +378,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         $this->mock->append(new Response(200, $headers, $body));
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'fetchEngines');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'fetchEngines');
         $reflectionMethod->setAccessible(true);
 
         // Invoke our method which will trigger an API call
@@ -411,7 +415,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         $this->mock->append(new Response(200, $headers, $body));
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'fetchEngines');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'fetchEngines');
         $reflectionMethod->setAccessible(true);
 
         // Invoke our method which will trigger an API call. We expect this to throw an Exception
@@ -442,7 +446,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         $this->mock->append(new Response(200, $headers, $body));
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'fetchEngines');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'fetchEngines');
         $reflectionMethod->setAccessible(true);
 
         // Invoke our method which will trigger an API call. We expect this to throw an Exception
@@ -474,7 +478,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         $this->mock->append(new Response(200, $headers, $body));
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'findOrMakeIndex');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'findOrMakeIndex');
         $reflectionMethod->setAccessible(true);
 
         // Invoke our method which will trigger an API call. We kinda just know that this is finding an existing
@@ -507,7 +511,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         $this->mock->append(new Response(200, $headers, $body));
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'findOrMakeIndex');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'findOrMakeIndex');
         $reflectionMethod->setAccessible(true);
 
         // Invoke our method which will trigger an API call. We expect this to throw an exception
@@ -544,7 +548,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         $this->mock->append(new Response(200, $headers, $bodySecond));
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'findOrMakeIndex');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'findOrMakeIndex');
         $reflectionMethod->setAccessible(true);
 
         // Invoke our method which will trigger 2 API calls
@@ -580,7 +584,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         $this->mock->append(new Response(200, $headers, $bodySecond));
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'findOrMakeIndex');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'findOrMakeIndex');
         $reflectionMethod->setAccessible(true);
 
         // Invoke our method which will trigger 2 API calls, and we're expecting the second API call to trigger an error
@@ -632,7 +636,7 @@ class EnterpriseSearchServiceTest extends SapphireTest
         ];
 
         // This method is private, so we need Reflection to access it
-        $reflectionMethod = new ReflectionMethod(EnterpriseSearchService::class, 'getContentMapForDocuments');
+        $reflectionMethod = new ReflectionMethod(ElasticsearchService::class, 'getContentMapForDocuments');
         $reflectionMethod->setAccessible(true);
 
         // Invoke our method which will trigger 2 API calls, and we're expecting the second API call to trigger an error
@@ -1658,11 +1662,11 @@ class EnterpriseSearchServiceTest extends SapphireTest
             'Client' => $client,
         ];
 
-        $elasticClient = new ElasticClient($config);
+        $elasticClient = new ElasticsearchClient($config);
         $indexConfiguration = $this->mockConfig();
         $documentBuilder = Injector::inst()->get(DocumentBuilder::class);
 
-        $this->searchService = EnterpriseSearchService::create($elasticClient, $indexConfiguration, $documentBuilder);
+        $this->searchService = ElasticsearchService::create($elasticClient, $indexConfiguration, $documentBuilder);
     }
 
     protected function mockConfig(): IndexConfigurationFake

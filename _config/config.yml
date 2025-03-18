@@ -1,7 +1,7 @@
 ---
 Name: silverstripe-search-service-elastic
 Only:
-  envvarset: 'ENTERPRISE_SEARCH_API_KEY'
+  envvarset: 'ELASTICSEARCH_ENDPOINT'
 After:
   - 'silverstripe-search-service-dataobject'
   - 'search-service-default'
@@ -9,21 +9,22 @@ After:
 SilverStripe\Core\Injector\Injector:
   SilverStripe\SearchService\Service\IndexConfiguration:
     constructor:
-      index_variant: '`ENTERPRISE_SEARCH_ENGINE_PREFIX`'
+      index_variant: '`ELASTICSEARCH_INDEX_PREFIX`'
   SilverStripe\SearchService\Interfaces\IndexingInterface:
-    class: SilverStripe\SearchServiceElastic\Service\EnterpriseSearchService
+    class: SilverStripe\SearchServiceElastic\Service\ElasticsearchService
     constructor:
-      client: '%$Elastic\EnterpriseSearch\Client'
+      client: '%$Elastic\Elasticsearch\Client'
       configuration: '%$SilverStripe\SearchService\Service\IndexConfiguration'
       builder: '%$SilverStripe\SearchService\Service\DocumentBuilder'
-  Elastic\EnterpriseSearch\Client:
+  Elastic\Elasticsearch\Client:
     factory: SilverStripe\SearchServiceElastic\Service\ClientFactory
     constructor:
-      host: '`ENTERPRISE_SEARCH_ENDPOINT`'
-      token: '`ENTERPRISE_SEARCH_API_KEY`'
+      host: '`ELASTICSEARCH_ENDPOINT`'
+      username: '`ELASTICSEARCH_USERNAME`'
+      password: '`ELASTICSEARCH_PASSWORD`'
       http_client: '%$GuzzleHttp\Client'
 
-## customise the dataobject fields for EnterpriseSearch compatability
+## customise the dataobject fields for Elasticsearch compatibility
 SilverStripe\SearchService\DataObject\DataObjectDocument:
   id_field: record_id
   base_class_field: record_base_class

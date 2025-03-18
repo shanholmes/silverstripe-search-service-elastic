@@ -1,6 +1,6 @@
 {
     "name": "silverstripe/silverstripe-search-service-elastic",
-    "description": "Provide Elastic Enterprise Search Functionality to Silverstripe Search Service",
+    "description": "Provide Elasticsearch Functionality to Silverstripe Search Service",
     "type": "silverstripe-vendormodule",
     "license": "BSD-3-Clause",
     "authors": [
@@ -17,7 +17,7 @@
         "php": "^8.1",
         "silverstripe/framework": "^5",
         "silverstripe/silverstripe-search-service": "^3",
-        "elastic/enterprise-search": "^8.6",
+        "elasticsearch/elasticsearch": "^8.6",
         "guzzlehttp/guzzle": "^7"
     },
     "require-dev": {

@@ -2,41 +2,44 @@
 
 Elastic Service provider for [Silverstripe Search Service](https://github.com/silverstripe/silverstripe-search-service).
 
-This module uses Elastic's [Enterprise Search PHP library](https://github.com/elastic/enterprise-search-php) to provide
-the ability to index content for an Elastic App Search engine. This module **does not** provide any method for
-performing searches on your engines - we've added some [suggestions](#searching) though.
+This module uses Elastic's official [Elasticsearch PHP library](https://github.com/elastic/elasticsearch-php) to provide
+the ability to index content for Elasticsearch. This module **does not** provide any method for
+performing searches on your indices - we've added some [suggestions](#searching) though.
 
 ## Requirements
 
 * php: ^8.1
 * silverstripe/framework: ^5
 * silverstripe/silverstripe-search-service: ^3
-* elastic/enterprise-search: ^8.3
+* elasticsearch/elasticsearch: ^8.6
 * guzzlehttp/guzzle: ^7
 
 ## Installation
 
 `composer require silverstripe/silverstripe-search-service-elastic`
 
-## Activating EnterpriseSearch
+## Activating Elasticsearch
 
-To start using EnterpriseSearch, define environment variables containing your private API key, endpoint, and prefix.
+To start using Elasticsearch, define environment variables containing your endpoint, credentials, and index prefix.
 
 ```
-ENTERPRISE_SEARCH_ENDPOINT="https://abc123.app-search.ap-southeast-2.aws.found.io"
-ENTERPRISE_SEARCH_API_KEY="private-abc123"
-ENTERPRISE_SEARCH_ENGINE_PREFIX="value-excluding-index-name"
+ELASTICSEARCH_ENDPOINT="https://localhost:9200"
+ELASTICSEARCH_USERNAME="elastic"
+ELASTICSEARCH_PASSWORD="password"
+ELASTICSEARCH_INDEX_PREFIX="mysite"
 ```
 
-## Configuring EnterpriseSearch
+## Configuring Elasticsearch
 
-The most notable configuration surface for EnterpriseSearch is the schema, which determines how data is stored in your
-EnterpriseSearch index (engine). There are four types of data in EnterpriseSearch:
+The most notable configuration surface for Elasticsearch is the schema, which determines how data is stored in your
+Elasticsearch index. There are several types of data in Elasticsearch:
 
 * `text` (default)
 * `date`
-* `number`
-* `geolocation`
+* `integer`
+* `float`
+* `boolean`
+* `geo_point`
 
 You can specify these data types in the `options` node of your fields.
 
@@ -54,7 +57,7 @@ SilverStripe\SearchService\Service\IndexConfiguration:
                 type: text
 ```
 
-**Note**: Be careful about whimsically changing your schema. EnterpriseSearch may need to be fully reindexed if you
+**Note**: Be careful about whimsically changing your schema. Elasticsearch may need to be fully reindexed if you
 change the data type of a field.
 
 ## Additional documentation
@@ -67,17 +70,78 @@ useful to you are:
 
 ## Searching
 
-Elastic themselves provide a headless [Search UI](https://docs.elastic.co/search-ui/overview) JS library, which can
+Elastic provides several options for searching Elasticsearch:
+
+1. Direct API calls using the REST API
+2. Using the Search UI library
+3. Using the official Elasticsearch PHP client
+
+### REST API
+
+You can make direct HTTP calls to the Elasticsearch API endpoints to perform searches. This is the most low-level approach but gives you full control over the search request.
+
+```php
+$curl = curl_init();
+curl_setopt_array($curl, [
+    CURLOPT_URL => 'https://localhost:9200/myindex/_search',
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => [
+        'Content-Type: application/json',
+    ],
+    CURLOPT_POSTFIELDS => json_encode([
+        'query' => [
+            'match' => [
+                'title' => 'search term'
+            ]
+        ]
+    ]),
+]);
+$response = curl_exec($curl);
+curl_close($curl);
+$results = json_decode($response, true);
+```
+
+### Search UI Library
+
+Elasticsearch provides a headless [Search UI](https://docs.elastic.co/search-ui/overview) JS library, which can
 be used with vanilla JS or any framework like React, Vue, etc.
 
-There are two main libraries:
+The main library is:
 
-* [@elastic/search-ui-app-search-connector](https://www.npmjs.com/package/@elastic/search-ui-app-search-connector)
-  * Provides a class to help you connect to your Elastic App Search API.
 * [@elastic/search-ui](https://www.npmjs.com/package/@elastic/search-ui)
   * Provides a class that allows you to perform searches and manage your search state.
 
-If you are using React, then there is also
+If you are using React, there is also
 [@elastic/react-search-ui](https://www.npmjs.com/package/@elastic/react-search-ui), which provides interface components.
 
-If you are not using React, then the creation of the view will be up to you.
+### PHP Client
+
+You can also use the official Elasticsearch PHP client directly to perform searches:
+
+```php
+use Elastic\Elasticsearch\ClientBuilder;
+
+$client = ClientBuilder::create()
+    ->setHosts(['localhost:9200'])
+    ->setBasicAuthentication('username', 'password')
+    ->build();
+
+$params = [
+    'index' => 'myindex',
+    'body' => [
+        'query' => [
+            'match' => [
+                'title' => 'search term'
+            ]
+        ]
+    ]
+];
+
+$response = $client->search($params);
+
+// Get response as an array
+$results = $response->asArray();
+
+// Or access properties directly (Elasticsearch 8.x feature)
+echo $response['hits']['total']['value']; // Number of results
+```
